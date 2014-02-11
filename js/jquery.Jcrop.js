@@ -62,6 +62,13 @@
     function setOptions(opt) //{{{
     {
       if (typeof(opt) !== 'object') opt = {};
+
+      if (opt.aspectRatio) {
+        opt.minAspectRatio = opt.aspectRatio;
+        opt.maxAspectRatio = opt.aspectRatio;
+        delete opt.aspectRatio;
+      }
+
       options = $.extend(options, opt);
 
       $.each(['onChange','onSelect','onRelease','onDblClick'],function(i,e) {
@@ -91,38 +98,22 @@
     function dragmodeHandler(mode, f) //{{{
     {
       return function (pos) {
-        if (!options.aspectRatio) {
-          switch (mode) {
-          case 'e':
-            pos[1] = f.y2;
-            break;
-          case 'w':
-            pos[1] = f.y2;
-            break;
-          case 'n':
-            pos[0] = f.x2;
-            break;
-          case 's':
-            pos[0] = f.x2;
-            break;
-          }
-        } else {
-          switch (mode) {
-          case 'e':
-            pos[1] = f.y + 1;
-            break;
-          case 'w':
-            pos[1] = f.y + 1;
-            break;
-          case 'n':
-            pos[0] = f.x + 1;
-            break;
-          case 's':
-            pos[0] = f.x + 1;
-            break;
-          }
+        switch (mode) {
+        case 'e':
+          pos[1] = f.y2;
+          break;
+        case 'w':
+          pos[1] = f.y2;
+          break;
+        case 'n':
+          pos[0] = f.x2;
+          break;
+        case 's':
+          pos[0] = f.x2;
+          break;
         }
         Coords.setCurrent(pos);
+        Coords.setMode(mode);
         Selection.update();
       };
     }
@@ -459,7 +450,7 @@
           y1 = 0,
           x2 = 0,
           y2 = 0,
-          ox, oy;
+          ox, oy, mode;
 
       function setPressed(pos) //{{{
       {
@@ -475,6 +466,9 @@
         oy = pos[1] - y2;
         x2 = pos[0];
         y2 = pos[1];
+      }
+      function setMode(m) {
+        mode = m;
       }
       //}}}
       function getOffset() //{{{
@@ -524,11 +518,12 @@
       //}}}
       function getFixed() //{{{
       {
-        if (!options.aspectRatio) {
+        if (!options.minAspectRatio && !options.maxAspectRatio) {
           return getRect();
         }
         // This function could use some optimization I think...
-        var aspect = options.aspectRatio,
+        var minAspect = options.minAspectRatio,
+            maxAspect = options.maxAspectRatio,
             min_x = options.minSize[0] / xscale,
             
             
@@ -540,7 +535,7 @@
             rwa = Math.abs(rw),
             rha = Math.abs(rh),
             real_ratio = rwa / rha,
-            xx, yy, w, h;
+            xx, yy, w, h, aspect;
 
         if (max_x === 0) {
           max_x = boundx * 10;
@@ -548,33 +543,40 @@
         if (max_y === 0) {
           max_y = boundy * 10;
         }
-        if (real_ratio < aspect) {
+        var vertical = function () {
           yy = y2;
           w = rha * aspect;
           xx = rw < 0 ? x1 - w : w + x1;
 
           if (xx < 0) {
             xx = 0;
-            h = Math.abs((xx - x1) / aspect);
-            yy = rh < 0 ? y1 - h : h + y1;
           } else if (xx > boundx) {
             xx = boundx;
-            h = Math.abs((xx - x1) / aspect);
-            yy = rh < 0 ? y1 - h : h + y1;
           }
-        } else {
+          h = Math.abs((xx - x1) / aspect);
+          yy = rh < 0 ? y1 - h : h + y1;
+        };
+        var horizontal = function () {
           xx = x2;
           h = rwa / aspect;
           yy = rh < 0 ? y1 - h : y1 + h;
           if (yy < 0) {
             yy = 0;
-            w = Math.abs((yy - y1) * aspect);
-            xx = rw < 0 ? x1 - w : w + x1;
           } else if (yy > boundy) {
             yy = boundy;
-            w = Math.abs(yy - y1) * aspect;
-            xx = rw < 0 ? x1 - w : w + x1;
           }
+          w = Math.abs((yy - y1) * aspect);
+          xx = rw < 0 ? x1 - w : w + x1;
+        };
+
+        if (minAspect && real_ratio < minAspect) {
+          aspect = minAspect;
+          mode == 'e' || mode == 'w' ? horizontal() : vertical();
+        } else if (maxAspect && real_ratio > maxAspect) {
+          aspect = maxAspect;
+          mode == 'e' || mode == 'w' ? horizontal() : vertical();
+        } else {
+          return getRect();
         }
 
         // Magic %-)
@@ -726,6 +728,7 @@
         flipCoords: flipCoords,
         setPressed: setPressed,
         setCurrent: setCurrent,
+        setMode: setMode,
         getOffset: getOffset,
         moveOffset: moveOffset,
         getCorner: getCorner,
@@ -1660,7 +1663,8 @@
     handleOpacity: 0.5,
     handleSize: null,
 
-    aspectRatio: 0,
+    minAspectRatio: 0,
+    maxAspectRatio: 0,
     keySupport: true,
     createHandles: ['n','s','e','w','nw','ne','se','sw'],
     createDragbars: ['n','s','e','w'],
