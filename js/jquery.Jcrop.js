@@ -535,7 +535,32 @@
             rwa = Math.abs(rw),
             rha = Math.abs(rh),
             real_ratio = rwa / rha,
-            xx, yy, w, h, aspect;
+            xx, yy, w, h, aspect,
+            vertical = function () {
+              yy = y2;
+              w = rha * aspect;
+              xx = rw < 0 ? x1 - w : w + x1;
+
+              if (xx < 0) {
+                xx = 0;
+              } else if (xx > boundx) {
+                xx = boundx;
+              }
+              h = Math.abs((xx - x1) / aspect);
+              yy = rh < 0 ? y1 - h : h + y1;
+            },
+            horizontal = function () {
+              xx = x2;
+              h = rwa / aspect;
+              yy = rh < 0 ? y1 - h : y1 + h;
+              if (yy < 0) {
+                yy = 0;
+              } else if (yy > boundy) {
+                yy = boundy;
+              }
+              w = Math.abs((yy - y1) * aspect);
+              xx = rw < 0 ? x1 - w : w + x1;
+            };
 
         if (max_x === 0) {
           max_x = boundx * 10;
@@ -543,31 +568,6 @@
         if (max_y === 0) {
           max_y = boundy * 10;
         }
-        var vertical = function () {
-          yy = y2;
-          w = rha * aspect;
-          xx = rw < 0 ? x1 - w : w + x1;
-
-          if (xx < 0) {
-            xx = 0;
-          } else if (xx > boundx) {
-            xx = boundx;
-          }
-          h = Math.abs((xx - x1) / aspect);
-          yy = rh < 0 ? y1 - h : h + y1;
-        };
-        var horizontal = function () {
-          xx = x2;
-          h = rwa / aspect;
-          yy = rh < 0 ? y1 - h : y1 + h;
-          if (yy < 0) {
-            yy = 0;
-          } else if (yy > boundy) {
-            yy = boundy;
-          }
-          w = Math.abs((yy - y1) * aspect);
-          xx = rw < 0 ? x1 - w : w + x1;
-        };
 
         if (minAspect && real_ratio < minAspect) {
           aspect = minAspect;
