@@ -26,7 +26,8 @@
       onChange: updatePreview,
       onSelect: updatePreview,
       minAspectRatio: 0.5,
-      maxAspectRatio: 1
+      maxAspectRatio: 1,
+      minSize: [100, 100],
     },function(){
       // Use the API to get the real image size
       var bounds = this.getBounds();

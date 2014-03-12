@@ -91,6 +91,7 @@
 
       Coords.setPressed(Coords.getCorner(opp));
       Coords.setCurrent(opc);
+      Coords.setWidthHeight(fc.w, fc.h);
 
       Tracker.activateHandlers(dragmodeHandler(mode, fc), doneSelect, touch);
     }
@@ -113,7 +114,6 @@
           break;
         }
         Coords.setCurrent(pos);
-        Coords.setMode(mode);
         Selection.update();
       };
     }
@@ -450,7 +450,10 @@
           y1 = 0,
           x2 = 0,
           y2 = 0,
-          ox, oy, mode;
+          iw = 0,
+          ih = 0,
+          ia = 0,
+          ox, oy, l;
 
       function setPressed(pos) //{{{
       {
@@ -467,8 +470,12 @@
         x2 = pos[0];
         y2 = pos[1];
       }
-      function setMode(m) {
-        mode = m;
+      //}}}
+      function setWidthHeight(w, h) //{{{
+      {
+        iw = w;
+        ih = h;
+        ia = iw / ih;
       }
       //}}}
       function getOffset() //{{{
@@ -518,16 +525,11 @@
       //}}}
       function getFixed() //{{{
       {
-        if (!options.minAspectRatio && !options.maxAspectRatio) {
-          return getRect();
-        }
         // This function could use some optimization I think...
         var minAspect = options.minAspectRatio,
             maxAspect = options.maxAspectRatio,
             min_x = options.minSize[0] / xscale,
-            
-            
-            //min_y = options.minSize[1]/yscale,
+            min_y = options.minSize[1]/yscale,
             max_x = options.maxSize[0] / xscale,
             max_y = options.maxSize[1] / yscale,
             rw = x2 - x1,
@@ -535,7 +537,8 @@
             rwa = Math.abs(rw),
             rha = Math.abs(rh),
             real_ratio = rwa / rha,
-            xx, yy, w, h, aspect,
+            limitHit = false,
+            xx, yy, h, w, aspect,
             vertical = function () {
               yy = y2;
               w = rha * aspect;
@@ -571,36 +574,57 @@
 
         if (minAspect && real_ratio < minAspect) {
           aspect = minAspect;
-          mode == 'e' || mode == 'w' ? horizontal() : vertical();
         } else if (maxAspect && real_ratio > maxAspect) {
           aspect = maxAspect;
-          mode == 'e' || mode == 'w' ? horizontal() : vertical();
         } else {
           return getRect();
         }
+
+        //console.log(Math.abs(rwa - iw), Math.abs(rha - ih)) ;
+        Math.abs(rwa - iw) > Math.abs(rha - ih) ? horizontal() : vertical();
 
         // Magic %-)
         if (xx > x1) { // right side
           if (xx - x1 < min_x) {
             xx = x1 + min_x;
+            limitHit = true;
           } else if (xx - x1 > max_x) {
             xx = x1 + max_x;
+            limitHit = true;
           }
-          if (yy > y1) {
-            yy = y1 + (xx - x1) / aspect;
+          if (!limitHit) {
+            if (yy > y1) {
+              yy = y1 + (xx - x1) / aspect;
+            } else {
+              yy = y1 - (xx - x1) / aspect;
+            }
           } else {
-            yy = y1 - (xx - x1) / aspect;
+            if (yy > y1) {
+              yy = y1 + l.h;
+            } else {
+              yy = y1 - l.h;
+            }
           }
         } else if (xx < x1) { // left side
           if (x1 - xx < min_x) {
             xx = x1 - min_x;
+            limitHit = true;
           } else if (x1 - xx > max_x) {
             xx = x1 - max_x;
+            limitHit = true;
           }
-          if (yy > y1) {
-            yy = y1 + (x1 - xx) / aspect;
+          if (!limitHit) {
+            if (yy > y1) {
+              yy = y1 + (x1 - xx) / aspect;
+            } else {
+              yy = y1 - (x1 - xx) / aspect;
+            }
           } else {
-            yy = y1 - (x1 - xx) / aspect;
+            if (yy > y1) {
+              yy = y1 + l.h;
+            } else {
+              yy = y1 - l.h;
+            }
           }
         }
 
@@ -713,7 +737,7 @@
       //}}}
       function makeObj(a) //{{{
       {
-        return {
+        return l = {
           x: a[0],
           y: a[1],
           x2: a[2],
@@ -728,7 +752,7 @@
         flipCoords: flipCoords,
         setPressed: setPressed,
         setCurrent: setCurrent,
-        setMode: setMode,
+        setWidthHeight: setWidthHeight,
         getOffset: getOffset,
         moveOffset: moveOffset,
         getCorner: getCorner,
